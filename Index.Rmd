@@ -1,0 +1,124 @@
+---
+title: "Great Britian's COVID-19"
+author: "David Jackson"
+date: "Nov. 22, 2020"
+output: 
+  html_document: 
+    fig_width: 9
+    fig_height: 7
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE)
+library(ggplot2)
+library(scales)
+library(RSQLite)
+theme_set(theme_linedraw() + theme(panel.grid = element_line(linetype = 'dashed')))
+```
+
+## Great Britian's Battle with COVID-19
+
+```{r}
+rm(list=ls())
+source("../DATA/movavg.R")
+db <- db <- dbConnect(RSQLite::SQLite(),dbname= "../COVIDDB/COVID.sqlite3")
+df <- dbGetQuery(db,"select * from ECDC")
+df <- subset(df,geoID =="UK"  )
+df$Reported <- as.Date(df$Reported)
+mean(df$Cases)
+mean(df$Deaths)
+```
+
+
+```{r}
+US <- subset(df,Reported >="2020-02-01")
+
+US <- US[order(US$Reported),]
+US$MA14 <- movingAverage(US$Cases,14)
+US$MAD <- movingAverage(US$Deaths,14)
+```
+
+#### Daily Mortality Rate
+
+```{r}
+US$Rate <- US$Deaths/US$Cases
+mean(is.na(US$Rate))
+ggplot(US) + geom_line(aes(x=Reported,y=Rate)) +
+  labs(title="Pakistan Mortality Rate by Date ") +
+  scale_y_continuous(labels = percent) +
+  geom_hline(yintercept =mean(is.na(US$Rate)),col="red" ) +
+  scale_x_date()
+```
+
+
+### Plot of Daily Cases and Deaths
+
+```{r}
+ggplot(US) + geom_line(aes(x=Reported,y=Cases,col="Daily Cases")) +
+  labs(title="COVID-19 Cases by Date") +
+  geom_smooth(aes(x=Reported,y=Cases,col="Loess"),span=0.25) +
+   scale_x_date()
+  
+```
+```{r}
+ggplot(US) + geom_line(aes(x=Reported,y=Deaths,col="Daily Deaths")) +
+  labs(title="COVID-19 Deaths by Date") + ylim(0,175) +
+  geom_smooth(aes(x=Reported,y=Deaths,col="Loess"),span=0.25) +
+   scale_x_date()
+```
+```{r}
+USA <- subset(US,Reported >="2020-06-01")
+ggplot(USA) + geom_line(aes(x=Reported,y=Cases,col="Daily Cases")) +
+  labs(title="COVID-19 Cases by Date (since Jun. 1, 2020)") +
+  geom_smooth(aes(x=Reported,y=Cases,col="Loess"),span=0.25) +
+   scale_x_date()
+
+ggplot(USA) + geom_line(aes(x=Reported,y=Deaths,col="Daily Deaths")) +
+  labs(title="COVID-19 Deaths by Date (since Jun. 1, 2020)") + ylim(0,175) +
+  geom_smooth(aes(x=Reported,y=Deaths,col="Loess"),span=0.25) +
+   scale_x_date()
+```
+
+#### Non-Moving Average By Week and By Month
+
+```{r}
+US$Monthly <- as.Date(cut(US$Reported,
+  breaks = "month"))
+US$Weekly <- as.Date(cut(US$Reported,
+  breaks = "week",
+  start.on.monday = FALSE))
+
+```
+```{r}
+Weekly_Cases <- aggregate(Cases~Weekly,US,FUN=sum)
+Weekly_Deaths <- aggregate(Deaths~Weekly,US,FUN=sum)
+Weekly_Cases$DRate <- Weekly_Deaths$Deaths/Weekly_Cases$Cases
+Weekly_Cases$LivedSaved <- Weekly_Cases$Cases * (max(Weekly_Cases$DRate) - Weekly_Cases$DRate) * 100
+
+```
+```{r}
+ggplot(Weekly_Cases) + geom_col(aes(x=Weekly,y=Cases)) + 
+  labs(title="Weekly Cases",x="Date Reported", y="Weekly Cases")
+
+ggplot(Weekly_Deaths) + geom_col(aes(x=Weekly,y=Deaths)) + 
+  labs(title="Weekly Deaths",x="Date Reported", y="Weekly Deaths") +
+   ylim(0,1000)
+``` 
+
+#### Monthly Cases and Deaths
+
+```{r}
+
+Monthly_Cases <- aggregate(Cases~Monthly,US,FUN=sum)
+Monthly_Deaths <- aggregate(Deaths~Monthly,US,FUN=sum)
+Monthly_Cases$DRate <- Monthly_Deaths$Deaths/Monthly_Cases$Cases
+Monthly_Cases$LivedSaved <- Monthly_Cases$Cases * (max(Monthly_Cases$DRate) - Monthly_Cases$DRate) * 100
+```
+```{r}
+ggplot(Monthly_Cases) + geom_col(aes(x=Monthly,y=Cases)) +
+  labs(title="Monthly Cases")  +
+  scale_y_continuous(labels=scales::comma)
+
+ggplot(Monthly_Deaths) + geom_col(aes(x=Monthly,y=Deaths)) +
+  labs(title="Monthly Deaths")
+```
