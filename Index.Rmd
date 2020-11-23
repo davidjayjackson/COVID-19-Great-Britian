@@ -1,7 +1,7 @@
 ---
 title: "Great Britian's COVID-19"
 author: "David Jackson"
-date: "Nov. 22, 2020"
+date: "Nov. 23, 2020"
 output: 
   html_document: 
     fig_width: 9
@@ -44,7 +44,7 @@ US$MAD <- movingAverage(US$Deaths,14)
 US$Rate <- US$Deaths/US$Cases
 mean(is.na(US$Rate))
 ggplot(US) + geom_line(aes(x=Reported,y=Rate)) +
-  labs(title="Pakistan Mortality Rate by Date ") +
+  labs(title="Great Britian Mortality Rate by Date ") +
   scale_y_continuous(labels = percent) +
   geom_hline(yintercept =mean(is.na(US$Rate)),col="red" ) +
   scale_x_date()
